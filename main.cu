@@ -8,6 +8,8 @@
 #include <fstream>
 #include <sstream>
 #include <filesystem>
+// for timing
+#include <chrono>
 
 std::unique_ptr<Sorter> get_sorter(std::string input) {
 	if (input == "qsort") {
@@ -102,16 +104,21 @@ int main(int argc, char* argv[]) {
 	auto GT_sorter = get_sorter("qsort");
 	auto ours_sorter = get_sorter(sort_method);
 
+	auto start = std::chrono::high_resolution_clock::now();
 	ours_sorter->sort(datas,data_length);
+    auto end = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> duration = end - start;
+	printf("Your sort code runs for : %f secondes \n" , duration.count());
+
 	// Compare with GT
 	GT_sorter->sort(GT_datas,data_length);
 
 	// Debug
 	/*
-	*/
 	for (int i = 0; i < data_length; ++i) {
 		printf("%f vs %f \n" , datas[i] , GT_datas[i]);
 	}
+	*/
 
 
 	bool is_correct = compare_answer(GT_datas , datas , data_length);
