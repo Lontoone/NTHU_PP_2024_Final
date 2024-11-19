@@ -2,7 +2,11 @@
 #include "device_launch_parameters.h"
 #include <stdio.h>
 #include <iostream>
+
+// Our Sorters....
 #include "QSorter.cu"
+#include "radix_sort_slow.cu"
+
 // For reading file input
 #include <string.h>
 #include <fstream>
@@ -131,5 +135,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	system("pause");
+	free(datas);
+	free(GT_datas);
 
 }  

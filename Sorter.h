@@ -1,3 +1,4 @@
+#pragma once
 class Sorter
 {
 public:
@@ -7,3 +8,4 @@ public:
 	~Sorter() = default;
 
 };
+
