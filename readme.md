@@ -1,3 +1,14 @@
+# How to start
+
+```
+mkdir build
+cd build
+cmake ../
+cmake --build .
+```
+
+You will build 2 exe file : `GenData.exe` and `Final_Project.exe`. One for data generation one for sorter.
+
 # Main sorter:
 
 Run this command :
