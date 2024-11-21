@@ -11,6 +11,11 @@ public:
 		qsort(datas, data_length, sizeof(float), compare);
 	}
 private:
+	static int compare(const void* a, const void* b) {
+		auto c = (*(float*)a - *(float*)b);
+		return c>0;
+	}
+	/*
 	// compare function including -0.0 < 0.0 detection
 	static int compare(const void* a, const void* b) {
 
@@ -27,4 +32,5 @@ private:
 		return c > 0;
 
 	}
+	*/
 };
