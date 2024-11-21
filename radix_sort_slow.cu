@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "Sorter.h"
+#include <bitset>
+#include <iostream>
 
 #define THREAD_W 16
 #define BITS_LEN 32
@@ -28,8 +30,10 @@ __global__ void preprocess_float(
 	if(idx >=n){
 		return;
 	}
-	printf("idx %d , n %d \n " , idx , n);
+ 	unsigned int *data_temp = (unsigned int *)(&data[idx]);    
+    *data_temp = (*data_temp >> 31 & 0x1)? ~(*data_temp): (*data_temp) | 0x80000000; 
 	/*
+	printf("idx %d , n %d \n " , idx , n);
 	// TEMP : Debug mode do not need float process
 	float f = data[idx];
     uint32_t fu = __float_as_uint(f);
@@ -47,8 +51,9 @@ __global__ void prefix_sum_hist(
 	int n,
 	int bit
 	){
-		uint32_t bit_data = (uint32_t(data[n-1]) & (1<<bit))>>bit;
+		uint32_t bit_data = (__float_as_uint(data[n-1]) & (1<<bit))>>bit;
 		bool is_one = bit_data & 1 ;
+		//printf("before %d  %d \n" , histgram_buffer[ 1 ] , histgram_buffer[ 0 ]);
 		histgram_buffer[ 1 ] = prefixSum_0_buffer[n-1] + !is_one;
 		
 		printf("     %d  %d \n" , histgram_buffer[ 1 ] , histgram_buffer[ 0 ]);
@@ -69,14 +74,17 @@ __global__ void prefix_sum(
 	int globalThreadIdX  = blockIdx.x * blockDim.x + threadIdx.x;
     int globalThreadIdY  = blockIdx.y * blockDim.y + threadIdx.y;
 	int idx  = globalThreadIdY * (gridDim.x * THREAD_W) + globalThreadIdX; 
-
+	/*
 	if(idx >= BITS_LEN){
 		return;
 	}
+	*/
 
 	for(int i=0 ; i<n-1;++i){
+		
 		//int bit = idx;		
-		uint32_t bit_data = (uint32_t(data[i]) & (1<<bit))>>bit;
+		uint32_t bit_data = (__float_as_uint(data[i]) & (1<<bit))>>bit;
+		//uint32_t bit_data = (uint32_t(data[i]) & (1<<bit))>>bit;
 		bool is_one = bit_data & 1 ;
 		//printf("bitdata %d bit %d  idx : %d :  %d \n" ,bit_data,(bit_data & 1) ,bit * n + i , prefixSum_buffer[bit * n + i+1 ] );
 		prefixSum_1_buffer[ i +1 ] = prefixSum_1_buffer[ i ] + is_one;	
@@ -157,7 +165,8 @@ __global__ void reorder(
 		return;
 	}
 
-	uint32_t bit_data = (uint32_t(data[idx]) & (1<<sort_bit))>>sort_bit;
+	uint32_t bit_data = (__float_as_uint(data[idx]) & (1<<sort_bit))>>sort_bit;
+	//uint32_t bit_data = (uint32_t(data[idx]) & (1<<sort_bit))>>sort_bit;
 	bool is_one = bit_data & 1 ;
 	if(is_one){
 		index_buffers[idx ] = histgram_buffer[1] + prefixSum_1_buffer[idx];
@@ -169,7 +178,7 @@ __global__ void reorder(
 	printf(" %d ",index_buffers[idx ]);
 
 }
-__global__ void postprocess_float(float* const sort_able_data , float* const origin_data,int n ,  unsigned int* index_buffers){
+__global__ void postprocess_float(DEBUG_FLOAT* const sort_able_data , DEBUG_FLOAT* const origin_data,int n ,  unsigned int* index_buffers){
 	int globalThreadIdX  = blockIdx.x * blockDim.x + threadIdx.x;
     int globalThreadIdY  = blockIdx.y * blockDim.y + threadIdx.y;
 	int idx  = globalThreadIdY * (gridDim.x * THREAD_W) + globalThreadIdX; 
@@ -177,8 +186,9 @@ __global__ void postprocess_float(float* const sort_able_data , float* const ori
 	if(idx >=n){
 		return;
 	}
-	unsigned int index = index_buffers[idx];
-	sort_able_data[idx] = origin_data[index];
+
+	unsigned int* data_temp = (unsigned int *)(&sort_able_data[idx]);
+    *data_temp = (*data_temp >> 31 & 0x1)? (*data_temp) & 0x7fffffff: ~(*data_temp);
 
 	/*
 	// Assuming fu is the transformed value
@@ -192,6 +202,7 @@ __global__ void postprocess_float(float* const sort_able_data , float* const ori
 	// Store the original float back to data
 	data[idx] = original_f;
     //return fu ^ mask;
+	
 	*/
 }
 
@@ -210,13 +221,16 @@ __global__ void init_sort(
 	if(idx >=n){
 		return;
 	}
-
+	/*
 	prefixSum_0_buffer[idx] = 0;
 	prefixSum_1_buffer[idx] = 0;
 
-	if(idx ==0){		
+	if(idx ==0)
+	{		
+		histgram_buffer[0] = 0;
 		histgram_buffer[1] = 0;
 	}
+	*/
 	
 	data_origin[idx] = data_sortable[idx];
 
@@ -259,10 +273,18 @@ public:
 					(data_length + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
 		// Prepare index and sortable conversion
-		preprocess_float<<< numBlocks , threadsPerBlock >>>(dev_datas_sortable , data_length , dev_index_buffer);
-
-		for(int i = 0 ; i< 4 ; i++){
+		preprocess_float<<< numBlocks , threadsPerBlock >>>(dev_datas_sortable , data_length , dev_index_buffer);		
+		
+		for(int i = 0 ; i< BITS_LEN ; i++)		
+		//for(int i = 0 ; i< 2 ; i++)
+		//int i = 31;
+		{
 			init_sort<<< numBlocks , threadsPerBlock >>>(dev_1prefixSum , dev_0prefixSum , dev_histgram , data_length , dev_datas_sortable , dev_origin_datas);
+			cudaMemset(dev_histgram , 0,  2 * BITS_LEN * sizeof(int));
+			cudaMemset(dev_1prefixSum, 0,  data_length * sizeof(int));
+			cudaMemset(dev_0prefixSum, 0,  data_length * sizeof(int));
+			cudaDeviceSynchronize();
+			
 			printf("\n");
 			// Prefix_sum				
 			prefix_sum<<< 1 , 1 >>>(dev_datas_sortable, data_length , dev_1prefixSum , dev_0prefixSum , dev_histgram , i);
@@ -270,16 +292,20 @@ public:
 			// Sort
 			reorder<<< numBlocks , threadsPerBlock >>>(dev_datas_sortable , dev_origin_datas, data_length , dev_1prefixSum , dev_0prefixSum , dev_histgram , dev_index_buffer, i);
 			printf("\n");
-			printf("\n");
+
 			cudaMemcpy(datas, dev_datas_sortable, data_length * sizeof(float), cudaMemcpyDeviceToHost);
 			printf("\n============================= datas =================================\n");
 			for(int i = 0 ; i < data_length ; i++){
-				printBits(datas[i]);			
+				printBits(datas[i]);								
+    			printf("\n");
 			}
-			printf("\n");
 		}
+		
+		/*
+		*/
+		
 		// Copy origin_datas into sortable by index.
-		//postprocess_float<<< numBlocks , threadsPerBlock >>>(dev_datas_sortable , dev_origin_datas, data_length , dev_index_buffer);
+		postprocess_float<<< numBlocks , threadsPerBlock >>>(dev_datas_sortable , dev_origin_datas, data_length , dev_index_buffer);
 		
 
 		// Clear kernel
@@ -292,12 +318,15 @@ public:
 		cudaFree(dev_1prefixSum);
 		cudaFree(dev_histgram);
 
-		/*
 		printf("============================= datas =================================\n");
 		for(int i = 0 ; i < data_length ; i++){
-			printBits(datas[i]);			
+			printBits(datas[i] );			
+			printf(" : %f" , datas[i] );
+			
+    		printf("\n");
 		}
 		printf("\n");
+		/*
 
 		printf("============================= prefix sum =================================\n");
 		for(int i = 0 ; i < data_length ; i++){
@@ -306,12 +335,20 @@ public:
 		*/
 	}
 private:
+	/*
 	void printBits(unsigned int num) {
-    int bits = sizeof(num) * 8; // Number of bits in the integer
-    for (int i = bits - 1; i >= 0; i--) {
-        unsigned int mask = 1 << i;
-        printf("%d", (num & mask) ? 1 : 0);
-    }
-    printf("\n");
-}
+		int bits = sizeof(num) * 8; // Number of bits in the integer
+		for (int i = bits - 1; i >= 0; i--) {
+			unsigned int mask = 1 << i;
+			printf("%d", (num & mask) ? 1 : 0);		
+    	}
+	}
+	*/
+	void printBits(DEBUG_FLOAT num) {
+		  unsigned int bits = *reinterpret_cast<unsigned int*>(&num);
+
+		// Print the bits
+		std::bitset<32> bitset(bits);
+		std::cout << "Bits of " << num << ": " << bitset << std::endl;
+	}
 };
