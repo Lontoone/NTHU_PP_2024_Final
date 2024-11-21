@@ -109,7 +109,7 @@ int main(int argc, char* argv[]) {
 	std::copy(datas , datas + data_length , GT_datas);
 
 	// Get sorter by input
-	auto GT_sorter = get_sorter("qsort");
+	auto GT_sorter = get_sorter("slr");
 	auto ours_sorter = get_sorter(sort_method);
 
 	auto start = std::chrono::high_resolution_clock::now();
