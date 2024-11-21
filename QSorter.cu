@@ -7,7 +7,7 @@ class QuickSorter :public Sorter
 public:
 	//QuickSorter :public Sorter();
 	//~QuickSorter :public Sorter();
-	void sort(float* datas , int data_length) override{
+	void sort(DEBUG_FLOAT*& datas , int data_length) override{
 		qsort(datas, data_length, sizeof(float), compare);
 	}
 private:

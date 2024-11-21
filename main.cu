@@ -23,6 +23,10 @@ std::unique_ptr<Sorter> get_sorter(std::string input) {
 		//.... return ours sorter
 		return std::make_unique<QuickSorter>();
 	}
+	else if(input =="slr"){
+		return std::make_unique<SlowRadixSorter>();
+	}
+
 	throw std::invalid_argument("unknow sorter type");
 
 }
@@ -38,7 +42,7 @@ bool compare_answer(float* data1 , float* data2 , int data_length) {
 	return true;
 }
 
-bool input_data(float*& datas , int& data_length ,const char* path) {
+bool input_data(DEBUG_FLOAT*& datas , int& data_length ,const char* path) {
 	std::ifstream file(path); // Open the file
 	if (!file.is_open()) {
 		std::cerr << "Failed to open the file." << std::endl;
@@ -53,11 +57,11 @@ bool input_data(float*& datas , int& data_length ,const char* path) {
 			std::stringstream ss(line);			
 			ss >> data_length;
 			// first element is data length
-			datas = (float*)malloc(data_length *sizeof(float));
+			datas = (DEBUG_FLOAT*)malloc(data_length *sizeof(DEBUG_FLOAT));
 		}
 		else {
 			std::stringstream ss(line);
-			float value;
+			DEBUG_FLOAT value;
 			ss >> value; // Convert line to float
 			if (ss.fail()) {
 				std::cerr << "Failed to convert line to float: " << line << std::endl;
@@ -98,10 +102,10 @@ int main(int argc, char* argv[]) {
 
 	// Load data	
 	int data_length = 0;
-	float* datas= NULL;
+	DEBUG_FLOAT* datas= NULL;
 	input_data(datas,data_length , data_path.c_str());
 	// Copy data for gt_sort to perform on
-	float* GT_datas = (float*)malloc(data_length*sizeof(float));
+	DEBUG_FLOAT* GT_datas = (DEBUG_FLOAT*)malloc(data_length*sizeof(DEBUG_FLOAT));
 	std::copy(datas , datas + data_length , GT_datas);
 
 	// Get sorter by input
@@ -118,13 +122,13 @@ int main(int argc, char* argv[]) {
 	GT_sorter->sort(GT_datas,data_length);
 
 	// Debug
-	/*
+	/* 
+	*/
+	printf("data_length %d \n" , data_length);
 	for (int i = 0; i < data_length; ++i) {
 		printf("%f vs %f \n" , datas[i] , GT_datas[i]);
-	}
-	*/
-
-
+	} 
+	/*
 	bool is_correct = compare_answer(GT_datas , datas , data_length);
 
 	if (is_correct) {
@@ -133,6 +137,7 @@ int main(int argc, char* argv[]) {
 	else {
 		printf("Inorrect :( \n");
 	}
+	*/
 
 	system("pause");
 	free(datas);
