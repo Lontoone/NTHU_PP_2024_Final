@@ -50,7 +50,6 @@ std::unique_ptr<Sorter> get_sorter(std::string input) {
 }
 ```
 
-
 # Generate data
 
 Run this command:
@@ -61,4 +60,20 @@ GenData.exe output_path number method
 Example:
 ```
 GenData.exe c02.txt 90 random
+```
+
+
+-----
+
+## Slow Radix Sort
+
+
+### How to run
+
+Use `-s slr` to run this.
+
+Example:
+```
+cmake --build .
+.\Debug\Final_Project.exe ../data/t01.txt -s slr
 ```
