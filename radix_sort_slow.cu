@@ -7,16 +7,6 @@
 #define THREAD_W 16
 #define BITS_LEN 32
 
-__device__ void extractBits(unsigned int d_num, int numBits) {
-    for(int i = BITS_LEN -1 ; i>0 ; --i)
-	{
-        unsigned int mask = 1 << (i);
-        unsigned int a =   (d_num & mask) ? 1 : 0;
-		printf(" %d" ,a  );
-    }
-	printf("\n");
-}
-
 __global__ void preprocess_float(
 	DEBUG_FLOAT* data , 
 	int n , 
@@ -32,16 +22,6 @@ __global__ void preprocess_float(
 	}
  	unsigned int *data_temp = (unsigned int *)(&data[idx]);    
     *data_temp = (*data_temp >> 31 & 0x1)? ~(*data_temp): (*data_temp) | 0x80000000; 
-	/*
-	printf("idx %d , n %d \n " , idx , n);
-	// TEMP : Debug mode do not need float process
-	float f = data[idx];
-    uint32_t fu = __float_as_uint(f);
-    uint32_t mask = __float_as_uint(-(int32_t(fu) >> 31)) | 0x80000000u;
-
-	index_buffers[idx] = idx;
-	data[idx] = fu ^ mask;	
-	*/
 
 }
 __global__ void prefix_sum_hist(
@@ -53,10 +33,10 @@ __global__ void prefix_sum_hist(
 	){
 		uint32_t bit_data = (__float_as_uint(data[n-1]) & (1<<bit))>>bit;
 		bool is_one = bit_data & 1 ;
-		//printf("before %d  %d \n" , histgram_buffer[ 1 ] , histgram_buffer[ 0 ]);
+		
 		histgram_buffer[ 1 ] = prefixSum_0_buffer[n-1] + !is_one;
 		
-		printf("     %d  %d \n" , histgram_buffer[ 1 ] , histgram_buffer[ 0 ]);
+		//printf("     %d  %d \n" , histgram_buffer[ 1 ] , histgram_buffer[ 0 ]);
 	}
 
 __global__ void prefix_sum(
@@ -80,45 +60,19 @@ __global__ void prefix_sum(
 	}
 	*/
 
-	for(int i=0 ; i<n-1;++i){
-		
-		//int bit = idx;		
+	for(int i=0 ; i<n-1;++i){		
 		uint32_t bit_data = (__float_as_uint(data[i]) & (1<<bit))>>bit;
-		//uint32_t bit_data = (uint32_t(data[i]) & (1<<bit))>>bit;
+		
 		bool is_one = bit_data & 1 ;
 		//printf("bitdata %d bit %d  idx : %d :  %d \n" ,bit_data,(bit_data & 1) ,bit * n + i , prefixSum_buffer[bit * n + i+1 ] );
 		prefixSum_1_buffer[ i +1 ] = prefixSum_1_buffer[ i ] + is_one;	
 		prefixSum_0_buffer[ i +1 ] = prefixSum_0_buffer[ i ] + !is_one;	
-		/*
-		if(!is_one){
-			atomicAdd(&histgram_buffer[ 1 ] ,1);
-		}
-		else{
-			// prefix sum for 0 is always 0
-			//atomicAdd(&histgram_buffer[bit * 2 + 0 ] ,1);
-		}
-		*/
+	
 	}
 	
-	/*
-	for(int i=0 ; i<n-1;++i){
-		int bit = idx;		
-		uint32_t bit_data = (uint32_t(data[i]) & (1<<bit))>>bit;
-		bool is_one = bit_data & 1 ;
-		//printf("bitdata %d bit %d  idx : %d :  %d \n" ,bit_data,(bit_data & 1) ,bit * n + i , prefixSum_buffer[bit * n + i+1 ] );
-		prefixSum_1_buffer[bit * n + i +1 ] = prefixSum_1_buffer[bit * n + i ] + is_one;	
-		prefixSum_0_buffer[bit * n + i +1 ] = prefixSum_0_buffer[bit * n + i ] + !is_one;	
-
-		if(!is_one){
-			atomicAdd(&histgram_buffer[bit * 2 + 1 ] ,1);
-		}
-		else{
-			// prefix sum for 0 is always 0
-			//atomicAdd(&histgram_buffer[bit * 2 + 0 ] ,1);
-		}
-	}
-	*/
+	
 	__syncthreads();
+	/*
 	if(idx == 0){
 		printf("\n idx | 1 | 0  \n");
 		for(int i = 0 ; i < n ; i++){		
@@ -126,22 +80,6 @@ __global__ void prefix_sum(
 
 		}
 
-	}
-
-	/*
-	// For each number, calculate its bit.
-	for(int bit=0;bit<BITS_LEN;bit++){
-		//uint32_t bit_data = (__float_as_uint(data[idx]) & (1<<bit))>>bit; // TODO: This may not work
-		uint32_t bit_data = (uint32_t(data[idx]) & (1<<bit))>>bit;
-		//bool is_one = bit_data & 1 ;
-
-		prefixSum_buffer[bit * n + idx +1 ] = prefixSum_buffer[bit * n + idx ] + (bit_data & 1);
-		__syncthreads();
-
-		if(bit == 0){
-			printf("bitdata %d bit %d  idx : %d :  %d \n" ,__float_as_uint(data[idx]),(bit_data & 1) ,bit * n + idx , prefixSum_buffer[bit * n + idx+1 ] );
-
-		}
 	}
 	*/
 
@@ -175,7 +113,7 @@ __global__ void reorder(
 		index_buffers[idx ] = histgram_buffer[0] + prefixSum_0_buffer[idx];
 	}
 	data[index_buffers[idx ]] = data_origin[idx];
-	printf(" %d ",index_buffers[idx ]);
+	//printf(" %d ",index_buffers[idx ]);
 
 }
 __global__ void postprocess_float(DEBUG_FLOAT* const sort_able_data , DEBUG_FLOAT* const origin_data,int n ,  unsigned int* index_buffers){
@@ -190,20 +128,6 @@ __global__ void postprocess_float(DEBUG_FLOAT* const sort_able_data , DEBUG_FLOA
 	unsigned int* data_temp = (unsigned int *)(&sort_able_data[idx]);
     *data_temp = (*data_temp >> 31 & 0x1)? (*data_temp) & 0x7fffffff: ~(*data_temp);
 
-	/*
-	// Assuming fu is the transformed value
-	uint32_t fu = __float_as_uint(origin_data[idx]);
-	uint32_t mask = (((fu >> 31)-1) | 0x80000000u);
-
-	// Reverse the transformation
-	uint32_t original_fu = fu ^ mask;
-	float original_f = __uint_as_float(original_fu);
-
-	// Store the original float back to data
-	data[idx] = original_f;
-    //return fu ^ mask;
-	
-	*/
 }
 
 __global__ void init_sort(
@@ -285,20 +209,22 @@ public:
 			cudaMemset(dev_0prefixSum, 0,  data_length * sizeof(int));
 			cudaDeviceSynchronize();
 			
-			printf("\n");
+			//printf("\n");
 			// Prefix_sum				
 			prefix_sum<<< 1 , 1 >>>(dev_datas_sortable, data_length , dev_1prefixSum , dev_0prefixSum , dev_histgram , i);
 			prefix_sum_hist<<<1,1>>>(dev_datas_sortable , dev_0prefixSum , dev_histgram , data_length ,i );
 			// Sort
 			reorder<<< numBlocks , threadsPerBlock >>>(dev_datas_sortable , dev_origin_datas, data_length , dev_1prefixSum , dev_0prefixSum , dev_histgram , dev_index_buffer, i);
-			printf("\n");
+			//printf("\n");
 
+			/*
 			cudaMemcpy(datas, dev_datas_sortable, data_length * sizeof(float), cudaMemcpyDeviceToHost);
 			printf("\n============================= datas =================================\n");
 			for(int i = 0 ; i < data_length ; i++){
 				printBits(datas[i]);								
     			printf("\n");
 			}
+			*/
 		}
 		
 		/*
@@ -317,7 +243,7 @@ public:
 		cudaFree(dev_0prefixSum);
 		cudaFree(dev_1prefixSum);
 		cudaFree(dev_histgram);
-
+		
 		printf("============================= datas =================================\n");
 		for(int i = 0 ; i < data_length ; i++){
 			printBits(datas[i] );			

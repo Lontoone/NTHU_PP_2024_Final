@@ -128,7 +128,6 @@ int main(int argc, char* argv[]) {
 	for (int i = 0; i < data_length; ++i) {
 		printf("%f vs %f \n" , datas[i] , GT_datas[i]);
 	} 
-	/*
 	bool is_correct = compare_answer(GT_datas , datas , data_length);
 
 	if (is_correct) {
@@ -137,6 +136,7 @@ int main(int argc, char* argv[]) {
 	else {
 		printf("Inorrect :( \n");
 	}
+	/*
 	*/
 
 	system("pause");
