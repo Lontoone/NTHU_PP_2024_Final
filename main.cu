@@ -6,6 +6,13 @@
 // Our Sorters....
 #include "QSorter.cu"
 #include "radix_sort_slow.cu"
+#include "radix_sort_cpu.cu"
+#include "radix_sort_v1.cu"
+#include "radix_sort_v2.cu"
+#include "radix_sort_v3.cu"
+#include "radix_sort_v4.cu"
+#include "radix_sort_v5.cu"
+#include "radix_sort_v6.cu"
 
 // For reading file input
 #include <string.h>
@@ -25,6 +32,27 @@ std::unique_ptr<Sorter> get_sorter(std::string input) {
 	}
 	else if(input =="slr"){
 		return std::make_unique<SlowRadixSorter>();
+	}	
+	else if(input =="cpu"){
+		return std::make_unique<CPURadixSorter>();
+	}
+	else if(input =="v1"){
+		return std::make_unique<RadixSorterv1>();
+	}
+	else if(input =="v2"){
+		return std::make_unique<RadixSorterv2>();
+	}
+	else if(input =="v3"){
+		return std::make_unique<RadixSorterv3>();
+	}
+	else if(input =="v4"){
+		return std::make_unique<RadixSorterv4>();
+	}
+	else if(input =="v5"){
+		return std::make_unique<RadixSorterv5>();
+	}
+	else if(input =="v6"){
+		return std::make_unique<RadixSorterv6>();
 	}
 
 	throw std::invalid_argument("unknow sorter type");
@@ -109,7 +137,7 @@ int main(int argc, char* argv[]) {
 	std::copy(datas , datas + data_length , GT_datas);
 
 	// Get sorter by input
-	auto GT_sorter = get_sorter("slr");
+	auto GT_sorter = get_sorter("cpu");
 	auto ours_sorter = get_sorter(sort_method);
 
 	auto start = std::chrono::high_resolution_clock::now();
@@ -123,11 +151,11 @@ int main(int argc, char* argv[]) {
 
 	// Debug
 	/* 
-	*/
 	printf("data_length %d \n" , data_length);
 	for (int i = 0; i < data_length; ++i) {
 		printf("%f vs %f \n" , datas[i] , GT_datas[i]);
 	} 
+	*/
 	bool is_correct = compare_answer(GT_datas , datas , data_length);
 
 	if (is_correct) {
