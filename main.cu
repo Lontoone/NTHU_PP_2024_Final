@@ -13,6 +13,7 @@
 #include "radix_sort_v4.cu"
 #include "radix_sort_v5.cu"
 #include "radix_sort_v6.cu"
+#include "radix_sort_v7.cu"
 
 // For reading file input
 #include <string.h>
@@ -53,6 +54,9 @@ std::unique_ptr<Sorter> get_sorter(std::string input) {
 	}
 	else if(input =="v6"){
 		return std::make_unique<RadixSorterv6>();
+	}
+	else if(input =="v7"){
+		return std::make_unique<RadixSorterv7>();
 	}
 
 	throw std::invalid_argument("unknow sorter type");

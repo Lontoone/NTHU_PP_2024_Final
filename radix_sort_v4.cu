@@ -7,10 +7,10 @@
 #define BITS_LEN 32
 #define BLOCK_SIZE 1024
 #define MAX_LAYER 32
-#define LAYER_SIZE 2 * BLOCK_SIZE // always multiple of BLOCK SIZE
 // Bank Conflict
 #define NUM_BANKS 32
 #define LOG_NUM_BANKS 5
+#define LAYER_SIZE 2 * BLOCK_SIZE // always multiple of BLOCK SIZE
 #define CONFLICT_FREE_OFFSET(n)((n) >> LOG_NUM_BANKS)
 
 namespace v4 {
